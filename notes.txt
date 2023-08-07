@@ -1,0 +1,14 @@
+On transmitter:
+
+- mkfifo pipe.bin
+- ffmpeg -f v4l2 -input_format mjpeg -s 160x120 -i /dev/video0 -r 1 -qscale:v 31 -f rtp rtp://127.0.0.1:9999
+- socat -u udp4-listen:9999 open:pipe.bin,append
+- ./ncurses_uhd_codec2_mod_file -i pipe.bin -a addr=192.168.10.2
+
+On receiver:
+
+- ./ncurses_uhd_codec2_demod_file -o data.bin -a addr=192.168.10.2
+- ffplay data.bin
+
+notes:
+  wait for KB before staring play
