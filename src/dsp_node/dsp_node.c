@@ -20,6 +20,8 @@
 unsigned int get_type_size(enum e_binary_type type);
 //global logger
 static struct s_logger *gp_logger = NULL;
+//global node count
+static unsigned long int g_node_count = 0;
 
 //Allocate the dsp_node struct with defined buffer size.
 struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_size)
@@ -74,6 +76,8 @@ struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_si
   p_temp->p_data = NULL;
 
   p_temp->total_bytes_processed = 0;
+
+  p_temp->id_number = g_node_count++;
 
   logger_info_msg(gp_logger, "DSP NODE %p created.", p_temp);
 
@@ -228,13 +232,16 @@ void dsp_cleanup(struct s_dsp_node *p_object)
     p_object->free_call(p_object);
   }
 
-  if(gp_logger)
+  g_node_count--;
+
+  if(gp_logger && !g_node_count)
   {
     logger_info_msg(gp_logger, "LOGGER FINISHED, DSP NODE CLEANUP STARTED.");
-    logger_cleanup(gp_logger);
-  }
 
-  gp_logger = NULL;
+    logger_cleanup(gp_logger);
+
+    gp_logger = NULL;
+  }
 
   if(p_object->output_type != DATA_INVALID) freeRingBuffer(&p_object->p_output_ring_buffer);
 

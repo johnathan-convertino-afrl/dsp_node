@@ -576,7 +576,7 @@ void *display_update(void *p_data)
 
     pthread_mutex_lock(&g_mutex);
 
-    doupdate();
+    if(!g_need_refresh) doupdate();
 
     pthread_cond_broadcast(&g_refresh_condition);
 
