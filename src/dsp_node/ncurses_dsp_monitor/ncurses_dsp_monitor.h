@@ -49,12 +49,12 @@ struct s_ncurses_dsp_monitor
 /**************************************************************************//**
   * @brief create an monitor with an attached window for a particular dsp node
   *
-  * @param p_node struct s_dsp_node object to monitor
+  * @param p_dsp_node struct s_dsp_node object to monitor
   * @param p_name name of to display for the monitor
   *
   * @return allocated ncurses_dsp_monitor struct that needs nodes added.
   ****************************************************************************/
-struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * const p_node, char *p_name);
+struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * const p_dsp_node, char *p_name);
 
 /**************************************************************************//**
   * @brief Start main monitor display, call this once after create.

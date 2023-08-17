@@ -13,6 +13,7 @@
 
 #include "codec2_func.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 // COMMON FUNCTIONS //
 
@@ -55,22 +56,22 @@ int init_callback_codec2_mod(void *p_init_args, void *p_object)
 
   struct s_dsp_node *p_dsp_node = NULL;
 
+  p_dsp_node = (struct s_dsp_node *)p_object;
+
   p_codec2_args = (struct s_codec2_func_args *)p_init_args;
 
   if(!p_codec2_args)
   {
-    fprintf(stderr, "ERROR: Codec2 DATAC1 init args are NULL.\n");
+    logger_error_msg(p_dsp_node->p_logger, "Codec2 DATAC1 mod init args are NULL.\n");
 
     return ~0;
   }
-
-  p_dsp_node = (struct s_dsp_node *)p_object;
 
   p_dsp_node->p_data = freedv_open(FREEDV_MODE_DATAC1);
 
   if(!p_dsp_node->p_data)
   {
-    fprintf(stderr, "ERROR: Codec2 DATAC1 mod create failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "ERROR: Codec2 DATAC1 mod create failed.\n");
 
     return ~0;
   }
@@ -78,6 +79,8 @@ int init_callback_codec2_mod(void *p_init_args, void *p_object)
   p_dsp_node->input_type = DATA_U8;
 
   p_dsp_node->output_type = p_codec2_args->sample_type;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, modulation node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -104,7 +107,8 @@ void* pthread_function_codec2_mod(void *p_data)
   if(!p_dsp_node)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
-    return NULL;
+
+    goto error_cleanup;
   }
 
   // setup data sizes for bytes per frame, number modulated out and such.
@@ -118,11 +122,9 @@ void* pthread_function_codec2_mod(void *p_data)
 
   if(!p_bytes_in)
   {
-    perror("ERROR: Could not allocate p_bytes_in buffer.");
+    logger_error_msg(p_dsp_node->p_logger, "CODEC2, mod could not allocate p_bytes_in buffer.");
 
-    kill_thread = 1;
-
-    return NULL;
+    goto error_cleanup;
   }
 
   // this example creates a buffer large enough for the preamble, data, postamble, and silence to be held.
@@ -130,16 +132,16 @@ void* pthread_function_codec2_mod(void *p_data)
 
   if(!p_mod_out)
   {
-    perror("ERROR: Could not allocate p_mod_out buffer.");
+    logger_error_msg(p_dsp_node->p_logger, "CODEC2, mod could not allocate p_mod_out buffer.");
 
     free(p_bytes_in);
 
-    kill_thread = 1;
-
-    return NULL;
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, modulation thread started.");
 
   do
   {
@@ -212,12 +214,17 @@ void* pthread_function_codec2_mod(void *p_data)
 
   } while((numRead > 0) && !kill_thread);
 
-  ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-  ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
-
+error_cleanup:
   free(p_mod_out);
 
   free(p_bytes_in);
+
+  ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
+  ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, modulation thread finished.");
 
   return NULL;
 }
@@ -243,22 +250,22 @@ int init_callback_codec2_demod(void *p_init_args, void *p_object)
 
   struct s_dsp_node *p_dsp_node = NULL;
 
+  p_dsp_node = (struct s_dsp_node *)p_object;
+
   p_codec2_args = (struct s_codec2_func_args *)p_init_args;
 
   if(!p_codec2_args)
   {
-    fprintf(stderr, "ERROR: Codec2 DATAC1 init args are NULL.\n");
+    logger_error_msg(p_dsp_node->p_logger, "Codec2 DATAC1 demod init args are NULL.\n");
 
     return ~0;
   }
-
-  p_dsp_node = (struct s_dsp_node *)p_object;
 
   p_dsp_node->p_data = freedv_open(FREEDV_MODE_DATAC1);
 
   if(!p_dsp_node->p_data)
   {
-    fprintf(stderr, "ERROR: Codec2 DATAC1 demod create failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "Codec2 DATAC1 demod create failed.\n");
 
     return ~0;
   }
@@ -268,6 +275,8 @@ int init_callback_codec2_demod(void *p_init_args, void *p_object)
   p_dsp_node->output_type = DATA_U8;
 
   p_dsp_node->input_type = p_codec2_args->sample_type;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, demodulation node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -292,9 +301,7 @@ void* pthread_function_codec2_demod(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
-    kill_thread = 1;
-
-    return NULL;
+    goto error_cleanup;
   }
 
   // how many bytes does each from the modem contain?
@@ -304,11 +311,9 @@ void* pthread_function_codec2_demod(void *p_data)
 
   if(!p_bytes_out)
   {
-    perror("ERROR: Could not allocate raw processor buffer.");
+    logger_error_msg(p_dsp_node->p_logger, "CODEC2, demod could not allocate raw processor buffer.");
 
-    kill_thread = 1;
-
-    return NULL;
+    goto error_cleanup;
   }
 
   max_modem_samples = (size_t)freedv_get_n_max_modem_samples((struct freedv *)p_dsp_node->p_data);
@@ -317,16 +322,14 @@ void* pthread_function_codec2_demod(void *p_data)
 
   if(!p_demod_in)
   {
-    perror("ERROR: Could not allocate enc processor buffer.");
+    logger_error_msg(p_dsp_node->p_logger, "CODEC2, demod could not allocate enc processor buffer.");
 
-    free(p_bytes_out);
-
-    kill_thread = 1;
-
-    return NULL;
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, demodulation thread started.");
 
   do
   {
@@ -365,12 +368,17 @@ void* pthread_function_codec2_demod(void *p_data)
 
   } while((numRead > 0) && !kill_thread);
 
-  ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-  ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+error_cleanup:
+  free(p_demod_in);
 
   free(p_bytes_out);
 
-  free(p_demod_in);
+  ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
+  ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "CODEC2, demodulation thread finished.");
 
   return NULL;
 }

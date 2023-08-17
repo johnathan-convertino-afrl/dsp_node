@@ -12,7 +12,7 @@ set(CODEC2_FUNC_SRCS
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
-include_directories(../ ../../kill_throbber/)
+include_directories(../ ../../kill_throbber/ ../../logger)
 
 set(LIB_NAME_CODEC2 codec2)
 

@@ -13,6 +13,7 @@
 
 #include "alsa_func.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 // PRIVATE FUNCTIONS //
 
@@ -83,7 +84,7 @@ int init_callback_alsa_read(void *p_init_args, void *p_object)
 
   if(error < 0)
   {
-    fprintf(stderr, "ERROR: SND OPEN: %s\n", snd_strerror(error));
+    logger_error_msg(p_dsp_node->p_logger, "ALSA READ SND OPEN: %s", snd_strerror(error));
 
     return ~0;
   }
@@ -92,7 +93,7 @@ int init_callback_alsa_read(void *p_init_args, void *p_object)
 
   if(error < 0)
   {
-    fprintf(stderr, "ERROR: SET_PARAM: %s\n", snd_strerror(error));
+    logger_error_msg(p_dsp_node->p_logger, "ALSA READ SET PARAM: %s", snd_strerror(error));
 
     snd_pcm_close((snd_pcm_t *)p_dsp_node->p_data);
 
@@ -102,6 +103,8 @@ int init_callback_alsa_read(void *p_init_args, void *p_object)
   p_dsp_node->input_type = DATA_INVALID;
 
   p_dsp_node->output_type = convert_type(p_alsa_args->format);
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, read node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -117,19 +120,23 @@ void* pthread_function_alsa_read(void *p_data)
 
   if(!p_dsp_node)
   {
-    fprintf(stderr, "Data Struct is NULL.\n");
-    return NULL;
+    fprintf(stderr, "ERROR: Data Struct is NULL.\n");
+
+    goto error_cleanup;
   }
 
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->output_type_size);
 
   if(!p_buffer)
   {
-    perror("Could not allocate file read buffer.");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "ALSA, Could not allocate file read buffer");
+
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, read thread started.");
 
   do
   {
@@ -147,9 +154,14 @@ void* pthread_function_alsa_read(void *p_data)
 
   } while(!kill_thread);
 
+error_cleanup:
+  free(p_buffer);
+
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
 
-  free(p_buffer);
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, read thread finished.");
 
   return NULL;
 }
@@ -184,7 +196,7 @@ int init_callback_alsa_write(void *p_init_args, void *p_object)
 
   if(error < 0)
   {
-    fprintf(stderr, "ERROR: SND OPEN: %s\n", snd_strerror(error));
+    logger_error_msg(p_dsp_node->p_logger, "ALSA WRITE SND OPEN: %s", snd_strerror(error));
 
     return ~0;
   }
@@ -193,7 +205,7 @@ int init_callback_alsa_write(void *p_init_args, void *p_object)
 
   if(error < 0)
   {
-    fprintf(stderr, "ERROR: SET_PARAM: %s\n", snd_strerror(error));
+    logger_error_msg(p_dsp_node->p_logger, "ALSA WRITE SET PARAM: %s", snd_strerror(error));
 
     snd_pcm_close((snd_pcm_t *)p_dsp_node->p_data);
 
@@ -203,6 +215,8 @@ int init_callback_alsa_write(void *p_init_args, void *p_object)
   p_dsp_node->output_type = DATA_INVALID;
 
   p_dsp_node->input_type = convert_type(p_alsa_args->format);
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, write node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -220,25 +234,30 @@ void* pthread_function_alsa_write(void *p_data)
 
   if(!p_dsp_node)
   {
-    fprintf(stderr, "Data Struct is NULL.\n");
-    return NULL;
+    fprintf(stderr, "ERROR: Data Struct is NULL.\n");
+
+    goto error_cleanup;
   }
 
   if(!p_dsp_node->p_input_ring_buffer)
   {
-    fprintf(stderr, "ERROR: No input buffer set for file write!\n");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "ALSA, No input buffer set for file write!\n");
+
+    goto error_cleanup;
   }
 
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->input_type_size);
 
   if(!p_buffer)
   {
-    perror("Could not allocate file read buffer.");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "ALSA, Could not allocate file read buffer");
+
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, write thread started.");
 
   do
   {
@@ -255,7 +274,14 @@ void* pthread_function_alsa_write(void *p_data)
 
   } while((numElemRead > 0) && !kill_thread);
 
+error_cleanup:
   free(p_buffer);
+
+  ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "ALSA, write thread finished.");
 
   return NULL;
 }

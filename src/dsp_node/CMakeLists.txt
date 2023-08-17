@@ -21,24 +21,32 @@ add_library(dsp_node ${DSP_NODE_SRCS})
 target_link_libraries(dsp_node PUBLIC ${LIB_NAME_RINGBUFFER} Threads::Threads)
 target_compile_options(dsp_node PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
-add_subdirectory(file)
+include_directories(../logger/)
+
+if(BUILD_EXAMPLES OR BUILD_LIB_FILE)
+  add_subdirectory(file)
+endif()
 
 if(BUILD_NCURSES_VERSIONS)
   add_subdirectory(ncurses_dsp_monitor)
 endif()
 
-if(BUILD_ALSA_EXAMPLES)
+if(BUILD_ALSA_EXAMPLES OR BUILD_LIB_ALSA)
   add_subdirectory(alsa)
 endif()
 
-if(BUILD_CODEC2_EXAMPLES)
+if(BUILD_CODEC2_EXAMPLES OR BUILD_LIB_CODEC2)
   add_subdirectory(codec2)
 endif()
 
-if(BUILD_SOXR_EXAMPLES)
+if(BUILD_SOXR_EXAMPLES OR BUILD_LIB_SOXR)
   add_subdirectory(soxr)
 endif()
 
-if(BUILD_UHD_EXAMPLES)
+if(BUILD_UHD_EXAMPLES OR BUILD_LIB_UHD)
   add_subdirectory(uhd)
+endif()
+
+if(BUILD_TCP_EXAMPLES OR BUILD_LIB_TCP_SERVER)
+  add_subdirectory(tcp_server)
 endif()

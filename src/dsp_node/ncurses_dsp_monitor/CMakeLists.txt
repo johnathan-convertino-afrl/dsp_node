@@ -10,7 +10,7 @@ set(NCURSES_DSP_SRCS
   ncurses_dsp_monitor.h
 )
 
-include_directories(../ ../../kill_throbber/)
+include_directories(../ ../../kill_throbber/ ../../logger/)
 
 find_package(Curses REQUIRED)
 

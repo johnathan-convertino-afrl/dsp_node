@@ -16,6 +16,7 @@
 #include "uhd.h"
 #include "uhd_func.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 //uhd struct type for global data
 struct s_uhd_data
@@ -32,7 +33,7 @@ static struct s_uhd_data *gp_uhd_data = NULL;
 // PRIVATE FUNCTIONS //
 
 //connect to the device if no connection has been made.
-struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args);
+struct s_uhd_data *connect_to_uhd_device(struct s_dsp_node *p_dsp_node, struct s_uhd_func_args *p_func_args);
 
 //disconnect if the device is still connected.
 void disconnect_from_uhd_device();
@@ -118,7 +119,7 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
 
   p_uhd_args = (struct s_uhd_func_args *)p_init_args;
 
-  p_dsp_node->p_data = connect_to_uhd_device(p_uhd_args);
+  p_dsp_node->p_data = connect_to_uhd_device(p_dsp_node, p_uhd_args);
 
   if(!p_dsp_node->p_data)
   {
@@ -142,7 +143,7 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set rx rate.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, Could not set rx rate.\n");
 
     goto ERR_CLOSE_USRP;
   }
@@ -150,14 +151,14 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
   // print what the rate is set to
   uhd_usrp_get_rx_rate(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->rate);
 
-  printf("INFO: USRP RX rate set to %f\n", p_uhd_args->rate);
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX, rate set to %f\n", p_uhd_args->rate);
 
   // setup rx gain
   error = uhd_usrp_set_rx_gain(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->gain, p_uhd_args->channel, "");
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set rx gain.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, Could not set rx gain.\n");
 
     goto ERR_CLOSE_USRP;
   }
@@ -165,14 +166,14 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
   // print what the gain is set to
   uhd_usrp_get_rx_gain(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, "", &p_uhd_args->gain);
 
-  printf("INFO: USRP RX gain set to %f\n", p_uhd_args->gain);
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX, gain set to %f\n", p_uhd_args->gain);
 
   // setup rx frequency
   error = uhd_usrp_set_rx_freq(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, &tune_request, p_uhd_args->channel, &tune_result);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set rx frequency.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, Could not set rx frequency.\n");
 
     goto ERR_CLOSE_USRP;
   }
@@ -180,7 +181,7 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
   // print what the rx frequency is set to
   uhd_usrp_get_rx_freq(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->freq);
 
-  printf("INFO: USRP RX frequnecy set to %f\n", p_uhd_args->freq);
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX, frequnecy set to %f\n", p_uhd_args->freq);
 
   // set bandwidth
 
@@ -189,7 +190,7 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set RX bandwidth.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, Could not set RX bandwidth.\n");
 
     goto ERR_CLOSE_USRP;
   }
@@ -197,7 +198,7 @@ int init_callback_uhd_rx(void *p_init_args, void *p_object)
   // print what the bandwidth is
   uhd_usrp_get_rx_bandwidth(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->bandwidth);
 
-  printf("INFO: USRP RX bandwidth set to %f\n", p_uhd_args->bandwidth);
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX, bandwidth set to %f\n", p_uhd_args->bandwidth);
 
 ERR_CLOSE_USRP:
   if(error)
@@ -206,7 +207,7 @@ ERR_CLOSE_USRP:
 
     uhd_get_last_error(err_str, 512);
 
-    fprintf(stderr, "ERROR: %s\n", err_str);
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, %s\n", err_str);
 
     uhd_string_vector_free(&((struct s_uhd_data *)p_dsp_node->p_data)->device_vector);
   }
@@ -220,7 +221,7 @@ void* pthread_function_uhd_rx(void *p_data)
   int     error = 0;
   size_t  samps_per_buff = 0;
 
-//   char    err_str[512] = {"\0"};
+  char    err_str[512] = {"\0"};
 
   uhd_stream_cmd_t        stream_cmd;
   uhd_rx_metadata_handle  md;
@@ -246,7 +247,7 @@ void* pthread_function_uhd_rx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: USRP Make rx streamer failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, make rx streamer failed.");
 
     goto ERR_EXIT_THREAD;
   }
@@ -255,25 +256,25 @@ void* pthread_function_uhd_rx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: RX could not setup stream.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not setup stream.");
 
     goto ERR_EXIT_THREAD;
   }
 
   error = uhd_set_thread_priority(uhd_default_thread_priority, true);
 
-//   if(error)
-//   {
-//     uhd_get_last_error(err_str, 512);
-//     fprintf(stderr, "ERROR: Set priority failed, %s. Must be run as root. Running in non-root state.\n", err_str);
-//   }
+  if(error)
+  {
+    uhd_get_last_error(err_str, 512);
+    logger_warning_msg(p_dsp_node->p_logger, "UHD RX, Set priority failed, %s. Must be run as root. Running in non-root state.", err_str);
+  }
 
   // get the max number of samples for buffer setup
   error = uhd_rx_streamer_max_num_samps(rx_streamer, &samps_per_buff);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not get max number of samples.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not get max number of samples.");
 
     goto ERR_KILL_STREAMER;
   }
@@ -291,7 +292,7 @@ void* pthread_function_uhd_rx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not issue stream command.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not issue stream command.");
 
     goto ERR_KILL_STREAMER;
   }
@@ -301,7 +302,7 @@ void* pthread_function_uhd_rx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not create metadata.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not create metadata.");
 
     goto ERR_KILL_STREAMER;
   }
@@ -311,13 +312,14 @@ void* pthread_function_uhd_rx(void *p_data)
 
   if(!p_buffer)
   {
-    perror("ERROR RX");
+    logger_error_msg(p_dsp_node->p_logger, "UHD RX, allocation failed");
 
     goto ERR_EXIT_THREAD_MD;
   }
 
   p_dsp_node->total_bytes_processed = 0;
 
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX, thread started.");
   // read from USRP and write to ring buffer
   do
   {
@@ -328,7 +330,7 @@ void* pthread_function_uhd_rx(void *p_data)
 
     if(error)
     {
-      fprintf(stderr, "ERROR: RX streamer issues.\n");
+      logger_error_msg(p_dsp_node->p_logger, "UHD RX, streamer issues.");
 
       break;
     }
@@ -357,6 +359,8 @@ ERR_EXIT_THREAD:
 
   kill_thread = 1;
 
+  logger_info_msg(p_dsp_node->p_logger, "UHD RX thread finished.");
+
   return NULL;
 }
 
@@ -379,7 +383,7 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
 
   p_uhd_args = (struct s_uhd_func_args *)p_init_args;
 
-  p_dsp_node->p_data = connect_to_uhd_device(p_uhd_args);
+  p_dsp_node->p_data = connect_to_uhd_device(p_dsp_node, p_uhd_args);
 
   if(!p_dsp_node->p_data)
   {
@@ -403,7 +407,7 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set tx rate.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, could not set tx rate.");
 
     goto ERR_CLOSE_USRP;
   }
@@ -411,14 +415,14 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
   // print what the rate is set to
   uhd_usrp_get_tx_rate(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->rate);
 
-  printf("INFO: USRP TX rate set to %f\n", p_uhd_args->rate);
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX, rate set to %f", p_uhd_args->rate);
 
   // setup rx gain
   error = uhd_usrp_set_rx_gain(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->gain, p_uhd_args->channel, "");
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set rx gain.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, could not set rx gain.");
 
     goto ERR_CLOSE_USRP;
   }
@@ -426,14 +430,14 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
   // print what the gain is set to
   uhd_usrp_get_tx_gain(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, "", &p_uhd_args->gain);
 
-  printf("INFO: USRP TX gain set to %f\n", p_uhd_args->gain);
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX, gain set to %f", p_uhd_args->gain);
 
   // setup tx frequency
   error = uhd_usrp_set_tx_freq(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, &tune_request, p_uhd_args->channel, &tune_result);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set tx frequency.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, could not set tx frequency.");
 
     goto ERR_CLOSE_USRP;
   }
@@ -441,7 +445,7 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
   // print what the tx frequency is set to
   uhd_usrp_get_tx_freq(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->freq);
 
-  printf("INFO: USRP TX frequnecy set to %f\n", p_uhd_args->freq);
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX, frequnecy set to %f", p_uhd_args->freq);
 
   // set bandwidth
 
@@ -450,7 +454,7 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not set TX bandwidth.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, could not set TX bandwidth.");
 
     goto ERR_CLOSE_USRP;
   }
@@ -458,7 +462,7 @@ int init_callback_uhd_tx(void *p_init_args, void *p_object)
   // print what the bandwidth is
   uhd_usrp_get_tx_bandwidth(((struct s_uhd_data *)p_dsp_node->p_data)->usrp, p_uhd_args->channel, &p_uhd_args->bandwidth);
 
-  printf("INFO: USRP TX bandwidth set to %f\n", p_uhd_args->bandwidth);
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX, bandwidth set to %f", p_uhd_args->bandwidth);
 
 ERR_CLOSE_USRP:
   if(error)
@@ -467,7 +471,7 @@ ERR_CLOSE_USRP:
 
     uhd_get_last_error(err_str, 512);
 
-    fprintf(stderr, "ERROR: %s\n", err_str);
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, ERROR: %s", err_str);
 
     uhd_string_vector_free(&((struct s_uhd_data *)p_dsp_node->p_data)->device_vector);
   }
@@ -482,7 +486,7 @@ void* pthread_function_uhd_tx(void *p_data)
   size_t  samps_per_buff = 0;
   size_t  numElemRead = 0;
 
-//   char    err_str[512] = {"\0"};
+  char    err_str[512] = {"\0"};
 
   uhd_tx_metadata_handle  md;
   uhd_tx_streamer_handle  tx_streamer;
@@ -496,7 +500,7 @@ void* pthread_function_uhd_tx(void *p_data)
 
   if(!p_dsp_node)
   {
-    fprintf(stderr, "ERROR: Data Struct is NULL.\n");
+    fprintf(stderr, "ERROR: Data Struct is NULL.");
 
     goto ERR_EXIT_THREAD;
   }
@@ -507,7 +511,7 @@ void* pthread_function_uhd_tx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: USRP make tx streamer failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, USRP make tx streamer failed.");
 
     goto ERR_EXIT_THREAD;
   }
@@ -516,25 +520,25 @@ void* pthread_function_uhd_tx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: TX could not setup stream.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, TX could not setup stream.");
 
     goto ERR_EXIT_THREAD;
   }
 
   error = uhd_set_thread_priority(uhd_default_thread_priority, true);
 
-//   if(error)
-//   {
-//     uhd_get_last_error(err_str, 512);
-//     fprintf(stderr, "ERROR: Set priority failed, %s. Must be run as root. Running in non-root state.\n", err_str);
-//   }
+  if(error)
+  {
+    uhd_get_last_error(err_str, 512);
+    logger_warning_msg(p_dsp_node->p_logger, "UHD TX, Set priority failed, %s. Must be run as root. Running in non-root state.", err_str);
+  }
 
   // get the max number of samples for buffer setup
   error = uhd_tx_streamer_max_num_samps(tx_streamer, &samps_per_buff);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not get max number of samples.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, Could not get max number of samples.");
 
     goto ERR_KILL_STREAMER;
   }
@@ -548,7 +552,7 @@ void* pthread_function_uhd_tx(void *p_data)
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Could not create metadata.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, Could not create metadata.");
 
     goto ERR_KILL_STREAMER;
   }
@@ -558,7 +562,7 @@ void* pthread_function_uhd_tx(void *p_data)
 
   if(!p_buffer)
   {
-    perror("ERROR TX");
+    logger_error_msg(p_dsp_node->p_logger, "UHD TX, ERROR TX");
 
     goto ERR_EXIT_THREAD_MD;
   }
@@ -577,7 +581,7 @@ void* pthread_function_uhd_tx(void *p_data)
 
     error = uhd_tx_streamer_send(tx_streamer, (const void **)&p_buffer, numElemRead, &md, 3.0, &numElemWrote);
 
-    if(error) fprintf(stderr, "ERROR: TX streamer issues.\n");
+    if(error) logger_error_msg(p_dsp_node->p_logger, "UHD TX, TX streamer issues.");
 
   } while((numElemRead > 0) && !kill_thread);
 
@@ -617,7 +621,7 @@ int free_callback_uhd(void *p_object)
 }
 
 //connect to the device if no connection has been made.
-struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args)
+struct s_uhd_data *connect_to_uhd_device(struct s_dsp_node *p_dsp_node, struct s_uhd_func_args *p_func_args)
 {
   int error = 0;
   size_t num    = 0;
@@ -628,7 +632,7 @@ struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args)
 
   if(gp_uhd_data)
   {
-    printf("INFO: USRP Device descriptor previously created, reusing.\n");
+    logger_info_msg(p_dsp_node->p_logger, "UHD, USRP Device descriptor previously created, reusing.");
 
     return gp_uhd_data;
   }
@@ -637,39 +641,40 @@ struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args)
 
   if(!gp_uhd_data)
   {
-    fprintf(stderr, "ERROR: Could not allocate UHD global struct.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD, Could not allocate UHD global struct.");
 
     return NULL;
   }
 
-  printf("INFO: Searching for USRP device with args %s\n", p_func_args->p_device_args);
+  logger_info_msg(p_dsp_node->p_logger, "UHD, searching for USRP device with args %s", p_func_args->p_device_args);
 
   error = uhd_string_vector_make(&gp_uhd_data->device_vector);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Device vector make failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD, Device vector make failed.");
 
+    goto ERR_FREE_VECTOR;
   }
 
   error = uhd_usrp_find(p_func_args->p_device_args, &gp_uhd_data->device_vector);
 
   if(error)
   {
-    fprintf(stderr, "ERROR: Device find failed.\n");
+    logger_error_msg(p_dsp_node->p_logger, "UHD, Device find failed.");
 
     goto ERR_FREE_VECTOR;
   }
 
   uhd_string_vector_size(gp_uhd_data->device_vector, &num);
 
-  printf("INFO: Found %ld devices.\n", num);
+  logger_info_msg(p_dsp_node->p_logger, "UHD, Found %ld devices.", num);
 
   if(num <= 0)
   {
     error = ~0;
 
-    printf("INFO: No devices found, bad args %s\n.", p_func_args->p_device_args);
+    logger_error_msg(p_dsp_node->p_logger, "UHD, No devices found, bad args %s.", p_func_args->p_device_args);
 
     goto ERR_FREE_VECTOR;
   }
@@ -677,7 +682,7 @@ struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args)
   for(index = 0; index < num; index++)
   {
     uhd_string_vector_at(gp_uhd_data->device_vector, index, temp_str, 512);
-    printf("INFO: Device found at %ld is %s\n", index, temp_str);
+    logger_info_msg(p_dsp_node->p_logger, "UHD, Device found at %ld is %s", index, temp_str);
   }
 
   // create usrp device handle
@@ -687,7 +692,7 @@ struct s_uhd_data *connect_to_uhd_device(struct s_uhd_func_args *p_func_args)
   {
     uhd_get_last_error(err_str, 512);
 
-    fprintf(stderr, "ERROR: %s\n", err_str);
+    logger_error_msg(p_dsp_node->p_logger, "UHD, ERROR: %s", err_str);
   }
 
 ERR_FREE_VECTOR:

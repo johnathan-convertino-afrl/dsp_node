@@ -14,6 +14,7 @@
 #include "soxr.h"
 #include "soxr_func.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 //contains data for soxr input_data_callback
 struct s_soxr_callback_data
@@ -90,7 +91,7 @@ int init_callback_soxr(void *p_init_args, void *p_object)
 
   if(!p_dsp_node->p_data)
   {
-    fprintf(stderr, "ERROR: Malloc failed for soxr.\n");
+    logger_error_msg(p_dsp_node->p_logger, "SOXR Malloc failed for soxr.");
 
     return ~0;
   }
@@ -104,7 +105,7 @@ int init_callback_soxr(void *p_init_args, void *p_object)
 
   if(soxr_error)
   {
-    fprintf(stderr, "ERROR: %s\n", soxr_strerror(soxr_error));
+    logger_error_msg(p_dsp_node->p_logger, "SOXR %s\n", soxr_strerror(soxr_error));
 
     free(p_dsp_node->p_data);
 
@@ -116,6 +117,8 @@ int init_callback_soxr(void *p_init_args, void *p_object)
   p_dsp_node->input_type = p_soxr_func_args->input_type;
 
   p_dsp_node->output_type = p_soxr_func_args->output_type;
+
+  logger_info_msg(p_dsp_node->p_logger, "SOXR node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -139,16 +142,17 @@ void* pthread_function_soxr(void *p_data)
   if(!p_dsp_node)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
-    return NULL;
+
+    goto error_cleanup;
   }
 
   soxr_error = soxr_set_input_fn(((struct s_soxr_data *)p_dsp_node->p_data)->soxr, (soxr_input_fn_t)input_data_callback, &soxr_callback_data, p_dsp_node->chunk_size);
 
   if(soxr_error)
   {
-    fprintf(stderr, "ERROR: %s\n", soxr_strerror(soxr_error));
+    logger_error_msg(p_dsp_node->p_logger, "SOXR, %s\n", soxr_strerror(soxr_error));
 
-    goto SETUP_ERROR;
+    goto error_cleanup;
   }
 
   soxr_callback_data.p_ring_buffer = p_dsp_node->p_input_ring_buffer;
@@ -157,11 +161,12 @@ void* pthread_function_soxr(void *p_data)
 
   if(!soxr_callback_data.p_data_buffer)
   {
-    fprintf(stderr, "ERROR: Malloc failed for buffer.\n");
+    logger_error_msg(p_dsp_node->p_logger, "SOXR, Malloc failed for buffer.\n");
 
-    goto SETUP_ERROR;
+    goto error_cleanup;
   }
 
+  //scale the data buffer based up it output to input rate. This deals with integer divisable values only at the moment, which should be ok with fractional (will be 1024 vs 1024.5 for example).
   if(((struct s_soxr_data *)p_dsp_node->p_data)->soxr_args.output_rate > ((struct s_soxr_data *)p_dsp_node->p_data)->soxr_args.input_rate)
   {
     scaled_chunk_size = p_dsp_node->chunk_size * (long unsigned int)(((struct s_soxr_data *)p_dsp_node->p_data)->soxr_args.output_rate/((struct s_soxr_data *)p_dsp_node->p_data)->soxr_args.input_rate);
@@ -175,12 +180,14 @@ void* pthread_function_soxr(void *p_data)
 
   if(!p_output_buffer)
   {
-    fprintf(stderr, "ERROR: Malloc failed for buffer.\n");
+    logger_error_msg(p_dsp_node->p_logger, "SOXR, Malloc failed for buffer.\n");
 
-    goto SETUP_ERROR;
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "SOXR thread started.");
 
   do
   {
@@ -194,13 +201,17 @@ void* pthread_function_soxr(void *p_data)
 
   } while((num_wrote > 0) && !kill_thread);
 
-SETUP_ERROR:
+error_cleanup:
   free(p_output_buffer);
 
   free(soxr_callback_data.p_data_buffer);
 
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "SOXR thread finished.");
 
   return NULL;
 }

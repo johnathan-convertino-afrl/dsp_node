@@ -10,7 +10,7 @@ set(ALSA_FUNC_SRCS
   alsa_func.h
 )
 
-include_directories(../ ../../kill_throbber/)
+include_directories(../ ../../kill_throbber/ ../../logger/)
 
 find_package(ALSA)
 

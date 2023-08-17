@@ -10,7 +10,7 @@ set(FILE_FUNC_SRCS
   file_func.h
 )
 
-include_directories(../ ../../kill_throbber/)
+include_directories(../ ../../kill_throbber/ ../../logger/)
 
 add_library(file_func ${FILE_FUNC_SRCS})
 target_link_libraries(file_func PUBLIC ${LIB_NAME_RINGBUFFER} Threads::Threads)

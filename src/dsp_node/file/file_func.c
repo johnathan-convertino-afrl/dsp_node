@@ -13,6 +13,7 @@
 
 #include "file_func.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 //Setup file arg struct for file read/write init callbacks
 struct s_file_func_args *create_file_args(char *p_name, enum e_binary_type input_type, enum e_binary_type output_type, enum e_io_method io_method)
@@ -78,10 +79,12 @@ int init_callback_file_read(void *p_init_args, void *p_object)
 
   if(!p_dsp_node->p_data)
   {
-    perror("File IO Issue.");
+    logger_error_msg(p_dsp_node->p_logger, "FILE READ File IO Issue.");
 
     return ~0;
   }
+
+  logger_info_msg(p_dsp_node->p_logger, "FILE READ node created for %p.", p_dsp_node);
 
   return 0;
 }
@@ -97,19 +100,23 @@ void* pthread_function_file_read(void *p_data)
 
   if(!p_dsp_node)
   {
-    fprintf(stderr, "Data Struct is NULL.\n");
-    return NULL;
+    fprintf(stderr, "ERROR: Data Struct is NULL.\n");
+
+    goto error_cleanup;
   }
 
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->output_type_size);
 
   if(!p_buffer)
   {
-    perror("Could not allocate file read buffer.");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "FILE READ, could not allocate file read buffer.");
+
+    goto error_cleanup;
   }
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "FILE READ thread started.");
 
   do
   {
@@ -127,9 +134,14 @@ void* pthread_function_file_read(void *p_data)
 
   } while(!feof((FILE *)p_dsp_node->p_data) && !kill_thread);
 
+error_cleanup:
+  free(p_buffer);
+
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
 
-  free(p_buffer);
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "FILE READ thread finished.");
 
   return NULL;
 }
@@ -181,6 +193,8 @@ int init_callback_file_write(void *p_init_args, void *p_object)
     return ~0;
   }
 
+  logger_info_msg(p_dsp_node->p_logger, "FILE WRITE node created for %p.", p_dsp_node);
+
   return 0;
 }
 
@@ -197,22 +211,25 @@ void* pthread_function_file_write(void *p_data)
 
   if(!p_dsp_node)
   {
-    fprintf(stderr, "Data Struct is NULL.\n");
-    return NULL;
+    fprintf(stderr, "ERROR: Data Struct is NULL.\n");
+
+    goto error_cleanup;
   }
 
   if(!p_dsp_node->p_input_ring_buffer)
   {
-    fprintf(stderr, "ERROR: No input buffer set for file write!\n");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "FILE WRITE, no input buffer set for file write!");
+
+    goto error_cleanup;
   }
 
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->input_type_size);
 
   if(!p_buffer)
   {
-    perror("Could not allocate file read buffer.");
-    return NULL;
+    logger_error_msg(p_dsp_node->p_logger, "FILE WRITE, could not allocate file read buffer.");
+
+    goto error_cleanup;
   }
 
   //this line sets the buffer size to the chunk size and allows data to be flushed out quicker for writes.
@@ -220,6 +237,8 @@ void* pthread_function_file_write(void *p_data)
   setvbuf((FILE *)p_dsp_node->p_data, NULL, _IOFBF, p_dsp_node->chunk_size * p_dsp_node->input_type_size);
 
   p_dsp_node->total_bytes_processed = 0;
+
+  logger_info_msg(p_dsp_node->p_logger, "FILE WRITE thread started.");
 
   do
   {
@@ -238,9 +257,14 @@ void* pthread_function_file_write(void *p_data)
 
   } while((numElemRead > 0) && !kill_thread);
 
+error_cleanup:
+  free(p_buffer);
+
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
 
-  free(p_buffer);
+  kill_thread = 1;
+
+  logger_info_msg(p_dsp_node->p_logger, "FILE WRITE thread finished.");
 
   return NULL;
 }

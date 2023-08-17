@@ -18,6 +18,8 @@
 
 //return the size of the type in bytes.
 unsigned int get_type_size(enum e_binary_type type);
+//global logger
+static struct s_logger *gp_logger = NULL;
 
 //Allocate the dsp_node struct with defined buffer size.
 struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_size)
@@ -28,10 +30,24 @@ struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_si
 
   if(!p_temp)
   {
-    perror("DSP Node struct failed:");
+    perror("DSP Node struct failed");
 
     return NULL;
   }
+
+  if(!gp_logger)
+  {
+    gp_logger = logger_create("dsp_node");
+
+    if(!gp_logger)
+    {
+      perror("Logger Creation failed");
+
+      return NULL;
+    }
+  }
+
+  p_temp->p_logger = gp_logger;
 
   p_temp->input_type = DATA_U8;
 
@@ -59,6 +75,8 @@ struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_si
 
   p_temp->total_bytes_processed = 0;
 
+  logger_info_msg(gp_logger, "DSP NODE %p created.", p_temp);
+
   return p_temp;
 }
 
@@ -69,14 +87,14 @@ int dsp_setup(struct s_dsp_node * const p_object, init_callback init_call, pthre
 
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for setup.\n");
+    logger_error_msg(gp_logger, "Object is NULL for setup.");
 
     return ~0;
   }
 
   if(!init_call || !thread_func || !free_call)
   {
-    fprintf(stderr, "ERROR: Callback functions can not be null.\n");
+    logger_error_msg(gp_logger, "Callback functions can not be null.");
 
     return ~0;
   }
@@ -100,7 +118,7 @@ int dsp_setup(struct s_dsp_node * const p_object, init_callback init_call, pthre
 
   if(!p_object->p_output_ring_buffer)
   {
-    fprintf(stderr, "ERROR: Output ringbuffer init failed\n");
+    logger_error_msg(gp_logger, "Output ringbuffer init failed.");
 
     return ~0;
   }
@@ -113,14 +131,14 @@ int dsp_setInput(struct s_dsp_node * const p_object, struct s_dsp_node const * c
 {
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for setInput.\n");
+    logger_error_msg(gp_logger, "Object is NULL for setInput.");
 
     return ~0;
   }
 
   if(!p_input_object)
   {
-    fprintf(stderr, "ERROR: input object is NULL for setInput.\n");
+    logger_error_msg(gp_logger, "Input object is NULL for setInput.");
 
     return ~0;
   }
@@ -128,20 +146,22 @@ int dsp_setInput(struct s_dsp_node * const p_object, struct s_dsp_node const * c
   //check data types to make sure they are the same. Also check if the input is set to something valid.
   if(p_input_object->output_type == DATA_INVALID)
   {
-    fprintf(stderr, "WARNING: Data type is invalid for input node output. This node does not output data from its output ringbuffer.\n");
+    logger_warning_msg(gp_logger, "Data type is invalid for input node output. This node does not output data from its output ringbuffer.");
   }
 
   if(p_object->input_type == DATA_INVALID)
   {
-      fprintf(stderr, "WARNING: Data type is invalid, no input needed or error has occured in init callback.\n");
+      logger_warning_msg(gp_logger, "Data type is invalid, no input needed or error has occured in init callback.");
   }
 
   if(p_object->input_type != p_input_object->output_type)
   {
-    fprintf(stderr, "WARNING: Formats between nodes do not match. Input needed is %d to node. Output is %d from input node.\n", p_object->input_type, p_input_object->output_type);
+    logger_warning_msg(gp_logger, "Formats between nodes do not match. Input needed is %d to node. Output is %d from input node.", p_object->input_type, p_input_object->output_type);
   }
 
   p_object->p_input_ring_buffer = p_input_object->p_output_ring_buffer;
+
+  logger_info_msg(gp_logger, "DSP NODE %p has input from %p.", p_object, p_input_object);
 
   return 0;
 }
@@ -151,10 +171,12 @@ int dsp_start(struct s_dsp_node * const p_object)
 {
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for wait.\n");
+    logger_error_msg(gp_logger, "Object is NULL for wait.");
 
     return ~0;
   }
+
+  logger_info_msg(gp_logger, "DSP NODE %p started.", p_object);
 
   return pthread_create(&p_object->dsp_thread, NULL, p_object->thread_func, p_object);
 }
@@ -162,14 +184,20 @@ int dsp_start(struct s_dsp_node * const p_object)
 //Wait for the pthread to finish
 int dsp_wait(struct s_dsp_node const * const p_object)
 {
+  int error = 0;
+
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for wait.\n");
+    logger_error_msg(gp_logger, "Object is NULL for wait.");
 
     return ~0;
   }
 
-  return pthread_join(p_object->dsp_thread, NULL);
+  error = pthread_join(p_object->dsp_thread, NULL);
+
+  logger_info_msg(gp_logger, "DSP NODE %p joined.", p_object);
+
+  return error;
 }
 
 //Force the pthread to end
@@ -177,7 +205,7 @@ int dsp_end(struct s_dsp_node const * const p_object)
 {
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for end.\n");
+    logger_error_msg(gp_logger, "Object is NULL for end.");
 
     return ~0;
   }
@@ -190,7 +218,7 @@ void dsp_cleanup(struct s_dsp_node *p_object)
 {
   if(!p_object)
   {
-    fprintf(stderr, "ERROR: object is NULL for cleanup.\n");
+    logger_error_msg(gp_logger, "Object is NULL for cleanup.");
 
     return;
   }
@@ -199,6 +227,14 @@ void dsp_cleanup(struct s_dsp_node *p_object)
   {
     p_object->free_call(p_object);
   }
+
+  if(gp_logger)
+  {
+    logger_info_msg(gp_logger, "LOGGER FINISHED, DSP NODE CLEANUP STARTED.");
+    logger_cleanup(gp_logger);
+  }
+
+  gp_logger = NULL;
 
   if(p_object->output_type != DATA_INVALID) freeRingBuffer(&p_object->p_output_ring_buffer);
 

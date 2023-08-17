@@ -54,7 +54,7 @@ if (NOT ${LIB_NAME_UHD}_POPULATED)
     add_subdirectory(${${LIB_NAME_UHD}_SOURCE_DIR}/host ${${LIB_NAME_UHD}_BINARY_DIR}/host)
 endif ()
 
-include_directories(../ ../../kill_throbber/)
+include_directories(../ ../../kill_throbber/ ../../logger/)
 
 add_library(uhd_func ${UHD_FUNC_SRCS})
 target_link_libraries(uhd_func PUBLIC ${LIB_NAME_RINGBUFFER} ${LIB_NAME_UHD} Threads::Threads)

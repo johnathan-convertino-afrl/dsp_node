@@ -31,7 +31,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(${LIB_NAME_SOXR})
 
-include_directories( ${FETCHCONTENT_BASE_DIR}/${LIB_NAME_SOXR}-src/src/ ../ ../../kill_throbber/)
+include_directories( ${FETCHCONTENT_BASE_DIR}/${LIB_NAME_SOXR}-src/src/ ../ ../../kill_throbber/ ../../logger/)
 
 find_package(OpenMP REQUIRED)
 

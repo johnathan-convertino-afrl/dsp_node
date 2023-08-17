@@ -11,6 +11,7 @@
 
 // includes
 #include "ringBuffer.h"
+#include "logger.h"
 
 typedef int (*init_callback)(void *p_init_args, void *p_object);
 typedef void* (*pthread_function)(void *p_data);
@@ -28,6 +29,11 @@ enum e_binary_type {DATA_INVALID=-1, DATA_S8=0, DATA_U8, DATA_CS8, DATA_S16, DAT
  */
 struct s_dsp_node
 {
+  /**
+   * @var s_dsp_node::p_logger
+   * global logger pointer
+   */
+  struct s_logger *p_logger;
   /**
    * @var s_dsp_node::total_bytes_processed
    * number of bytes output by the node.

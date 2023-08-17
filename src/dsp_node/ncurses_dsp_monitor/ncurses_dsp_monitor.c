@@ -18,6 +18,7 @@
 
 #include "ncurses_dsp_monitor.h"
 #include "kill_throbber.h"
+#include "logger.h"
 
 #define THROBBER_COLORS 1
 #define RED_TEXT 2
@@ -110,13 +111,13 @@ char *scale_string(enum e_scale_type scale);
 // THREAD FUNCTIONS //
 
 //create an ncruses monitor window
-struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * const p_node, char *p_name)
+struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * const p_dsp_node, char *p_name)
 {
   struct s_ncurses_dsp_monitor *p_temp = NULL;
 
-  if(!p_node)
+  if(!p_dsp_node)
   {
-    fprintf(stderr, "ERROR: node passed is null.\n");
+    logger_error_msg(p_dsp_node->p_logger, "NCURSES DSP MONITOR node passed is null.");
 
     return NULL;
   }
@@ -125,7 +126,7 @@ struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * con
 
   if(!p_temp)
   {
-    fprintf(stderr, "ERROR: malloc failed for ncurses dsp monitor.\n");
+    logger_error_msg(p_dsp_node->p_logger, "NCURSES DSP MONITOR malloc failed for ncurses dsp monitor.");
 
     return NULL;
   }
@@ -134,7 +135,7 @@ struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * con
 
   p_temp->node_number = g_node_number;
 
-  p_temp->p_dsp_node = p_node;
+  p_temp->p_dsp_node = p_dsp_node;
 
   p_temp->p_name = strdup(p_name);
 
@@ -144,26 +145,55 @@ struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * con
 //start the main display
 int ncurses_dsp_monitor_start()
 {
+  int error = 0;
+
   if(!g_node_number)
   {
-    fprintf(stderr, "WARNING: No nodes created, only title and throbber created at this point!\n");
+    fprintf(stderr, "NCURSES DSP MONITOR, No nodes created, only title and throbber created at this point!\n");
   }
 
   if(!gp_stdscr)
   {
-    pthread_create(&update_thread, NULL, display_update, NULL);
+    error = pthread_create(&update_thread, NULL, display_update, NULL);
 
-    pthread_create(&resize_thread, NULL, init_screen_and_resize, NULL);
+    if(error)
+    {
+      fprintf(stderr, "NCURSES DSP MONITOR update thread failed to create.\n");
+
+      kill_thread = 1;
+
+      return error;
+    }
+
+    error = pthread_create(&resize_thread, NULL, init_screen_and_resize, NULL);
+
+    if(error)
+    {
+      fprintf(stderr, "NCURSES DSP MONITOR resize thread failed to create.\n");
+
+      kill_thread = 1;
+
+      return error;
+    }
 
     while(g_need_refresh);
 
     if(!gp_stdscr) return ~0;
 
-    pthread_create(&throbber_thread, NULL, display_throbber, NULL);
+    error = pthread_create(&throbber_thread, NULL, display_throbber, NULL);
+
+    if(error)
+    {
+      fprintf(stderr, "NCURSES DSP MONITOR throbber thread failed to create.\n");
+
+      kill_thread = 1;
+
+      return error;
+    }
   }
   else
   {
-    fprintf(stderr, "WARNING: Only call ncurses start once!\n");
+    fprintf(stderr, "NCURSES DSP MONITOR Only call ncurses start once!\n");
   }
 
   return 0;
@@ -222,7 +252,9 @@ void ncurses_dsp_monitor_cleanup(struct s_ncurses_dsp_monitor * p_object)
 
   g_node_number--;
 
-//   free(p_object->p_name);
+  free(p_object->p_name);
+
+  p_object->p_name = NULL;
 
   free(p_object);
 }
@@ -247,13 +279,24 @@ void *init_screen_and_resize(void *p_data)
 
       gp_stdscr = initscr();
 
+      if(!gp_stdscr)
+      {
+        fprintf(stderr, "NCURSES DSP MONITOR failed to init screen.\n");
+
+        kill_thread = 1;
+
+        pthread_mutex_unlock(&g_mutex);
+
+        continue;
+      }
+
       wclear(gp_stdscr);
 
       curs_set(0);
 
       if(!has_colors())
       {
-        fprintf(stderr, "ERROR: Colors not supported by terminal.\n");
+        fprintf(stderr, "NCURSES DSP MONITOR Colors not supported by terminal.\n");
 
         kill_thread = 1;
 
@@ -266,7 +309,7 @@ void *init_screen_and_resize(void *p_data)
 
       if(Y < HEADER_COL_SIZE)
       {
-        fprintf(stderr, "ERROR: Terminal size is too small COL: %d %d\n", HEADER_COL_SIZE, Y);
+        fprintf(stderr, "NCURSES DSP MONITOR Terminal size is too small COL: %d %d\n", HEADER_COL_SIZE, Y);
 
         kill_thread = 1;
 
@@ -277,7 +320,7 @@ void *init_screen_and_resize(void *p_data)
 
       if((unsigned)X < (g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE))
       {
-        fprintf(stderr, "ERROR: Terminal size is too small ROW: %d %d\n", g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE, X);
+        fprintf(stderr, "NCURSES DSP MONITOR Terminal size is too small ROW: %d %d\n", g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE, X);
 
         kill_thread = 1;
 
@@ -375,12 +418,14 @@ void *display_thread(void *p_data)
 
   if(!p_window)
   {
-    fprintf(stderr, "ERROR: newwin failed to create window.\n");
+    logger_error_msg(p_object->p_dsp_node->p_logger, "NCURSES DSP MONITOR newwin failed to create window.");
 
     kill_thread = 1;
 
     return NULL;
   }
+
+  logger_info_msg(p_object->p_dsp_node->p_logger, "NCURSES DSP MONITOR display thread started.");
 
   do
   {
@@ -399,6 +444,8 @@ void *display_thread(void *p_data)
       max_bytes = avg_bytes;
       max_scale_result = scale_result;
     }
+
+    if(g_need_refresh) continue;
 
     pthread_mutex_lock(&g_mutex);
 
@@ -440,6 +487,8 @@ void *display_thread(void *p_data)
 
   delwin(p_window);
 
+  logger_info_msg(p_object->p_dsp_node->p_logger, "NCURSES DSP MONITOR display thread finished.");
+
   return NULL;
 }
 
@@ -456,7 +505,7 @@ void *display_throbber(void *p_data)
 
   if(!th_window)
   {
-    fprintf(stderr, "ERROR: newwin failed to create window.\n");
+    fprintf(stderr, "NCURSES DSP MONITOR newwin failed to create window.\n");
 
     kill_thread = 1;
 
@@ -465,6 +514,8 @@ void *display_throbber(void *p_data)
 
   do
   {
+    if(g_need_refresh) continue;
+
     pthread_mutex_lock(&g_mutex);
 
     pthread_cond_wait(&g_refresh_condition, &g_mutex);
@@ -521,9 +572,9 @@ void *display_update(void *p_data)
 
     if(diff < SAMPLE_RATE_NS) continue;
 
-    pthread_mutex_lock(&g_mutex);
-
     previous = current;
+
+    pthread_mutex_lock(&g_mutex);
 
     doupdate();
 
