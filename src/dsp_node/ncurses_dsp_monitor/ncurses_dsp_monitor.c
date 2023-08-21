@@ -66,8 +66,10 @@ static pthread_cond_t g_refresh_condition;
 //number of nodes created
 static unsigned int g_node_number = 0;
 
-//do we need a refresh (initial is YES)
+///0 is no refresh, 1 is refresh, 2 is no more refresh and block others from trying
 static volatile sig_atomic_t g_need_refresh = 1;
+
+static struct s_logger *gp_logger = NULL;
 
 //screen initializer and resize helper
 void *init_screen_and_resize(void *p_data);
@@ -139,6 +141,8 @@ struct s_ncurses_dsp_monitor *ncurses_dsp_monitor_create(struct s_dsp_node * con
 
   p_temp->p_name = strdup(p_name);
 
+  gp_logger = p_dsp_node->p_logger;
+
   return p_temp;
 }
 
@@ -149,7 +153,7 @@ int ncurses_dsp_monitor_start()
 
   if(!g_node_number)
   {
-    fprintf(stderr, "NCURSES DSP MONITOR, No nodes created, only title and throbber created at this point!\n");
+    logger_error_msg(gp_logger, "NCURSES DSP MONITOR, No nodes created, only title and throbber created at this point!");
   }
 
   if(!gp_stdscr)
@@ -158,7 +162,7 @@ int ncurses_dsp_monitor_start()
 
     if(error)
     {
-      fprintf(stderr, "NCURSES DSP MONITOR update thread failed to create.\n");
+      logger_error_msg(gp_logger, "NCURSES DSP MONITOR update thread failed to create.");
 
       kill_thread = 1;
 
@@ -169,14 +173,14 @@ int ncurses_dsp_monitor_start()
 
     if(error)
     {
-      fprintf(stderr, "NCURSES DSP MONITOR resize thread failed to create.\n");
+      logger_error_msg(gp_logger, "NCURSES DSP MONITOR resize thread failed to create.");
 
       kill_thread = 1;
 
       return error;
     }
 
-    while(g_need_refresh);
+    while(g_need_refresh == 1);
 
     if(!gp_stdscr) return ~0;
 
@@ -184,7 +188,7 @@ int ncurses_dsp_monitor_start()
 
     if(error)
     {
-      fprintf(stderr, "NCURSES DSP MONITOR throbber thread failed to create.\n");
+      logger_error_msg(gp_logger, "NCURSES DSP MONITOR throbber thread failed to create.");
 
       kill_thread = 1;
 
@@ -193,7 +197,7 @@ int ncurses_dsp_monitor_start()
   }
   else
   {
-    fprintf(stderr, "NCURSES DSP MONITOR Only call ncurses start once!\n");
+    logger_error_msg(gp_logger, "NCURSES DSP MONITOR Only call ncurses start once!");
   }
 
   return 0;
@@ -281,7 +285,7 @@ void *init_screen_and_resize(void *p_data)
 
       if(!gp_stdscr)
       {
-        fprintf(stderr, "NCURSES DSP MONITOR failed to init screen.\n");
+        logger_error_msg(gp_logger, "NCURSES DSP MONITOR failed to init screen.");
 
         kill_thread = 1;
 
@@ -296,7 +300,7 @@ void *init_screen_and_resize(void *p_data)
 
       if(!has_colors())
       {
-        fprintf(stderr, "NCURSES DSP MONITOR Colors not supported by terminal.\n");
+        logger_error_msg(gp_logger, "NCURSES DSP MONITOR Colors not supported by terminal.");
 
         kill_thread = 1;
 
@@ -309,7 +313,7 @@ void *init_screen_and_resize(void *p_data)
 
       if(Y < HEADER_COL_SIZE)
       {
-        fprintf(stderr, "NCURSES DSP MONITOR Terminal size is too small COL: %d %d\n", HEADER_COL_SIZE, Y);
+        logger_error_msg(gp_logger, "NCURSES DSP MONITOR Terminal size is too small COL: %d %d", HEADER_COL_SIZE, Y);
 
         kill_thread = 1;
 
@@ -320,7 +324,7 @@ void *init_screen_and_resize(void *p_data)
 
       if((unsigned)X < (g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE))
       {
-        fprintf(stderr, "NCURSES DSP MONITOR Terminal size is too small ROW: %d %d\n", g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE, X);
+        logger_error_msg(gp_logger, "NCURSES DSP MONITOR Terminal size is too small ROW: %d %d", g_node_number * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE, X);
 
         kill_thread = 1;
 
@@ -357,13 +361,13 @@ void *init_screen_and_resize(void *p_data)
     }
   } while(!kill_thread);
 
+  g_need_refresh = 2;
+
   use_default_colors();
 
   endwin();
 
   gp_stdscr = NULL;
-
-  g_need_refresh = 0;
 
   signal(SIGWINCH, SIG_IGN);
 
@@ -505,7 +509,7 @@ void *display_throbber(void *p_data)
 
   if(!th_window)
   {
-    fprintf(stderr, "NCURSES DSP MONITOR newwin failed to create window.\n");
+    logger_error_msg(gp_logger, "NCURSES DSP MONITOR newwin failed to create window.");
 
     kill_thread = 1;
 
@@ -700,7 +704,7 @@ unsigned long scale_rate_remainder(unsigned long avg_rate, unsigned sample_rate,
   return 0;
 }
 
-//string for us people to read
+//human readable
 char *scale_string_sec(enum e_scale_type scale)
 {
   switch(scale)
@@ -721,7 +725,7 @@ char *scale_string_sec(enum e_scale_type scale)
   return "????";
 }
 
-//string for us people to read
+//human readable
 char *scale_string(enum e_scale_type scale)
 {
   switch(scale)
