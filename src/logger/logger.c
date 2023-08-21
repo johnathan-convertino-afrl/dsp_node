@@ -116,7 +116,7 @@ int logger_error_msg(struct s_logger *p_logger, const char *p_string, ...)
 
   va_start (cp_vlist, p_string);
 
-  error = string_write(p_logger, "ERROR", p_string, cp_vlist);
+  error = string_write(p_logger, "ERROR  ", p_string, cp_vlist);
 
   va_end(cp_vlist);
 
@@ -152,7 +152,7 @@ int logger_info_msg(struct s_logger *p_logger, const char *p_string, ...)
 
   va_start (cp_vlist, p_string);
 
-  error = string_write(p_logger, "INFO", p_string, cp_vlist);
+  error = string_write(p_logger, "INFO   ", p_string, cp_vlist);
 
   va_end(cp_vlist);
 
