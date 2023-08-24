@@ -143,6 +143,8 @@ void* pthread_function_soxr(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -154,6 +156,8 @@ void* pthread_function_soxr(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "SOXR, %s\n", soxr_strerror(soxr_error));
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -164,6 +168,8 @@ void* pthread_function_soxr(void *p_data)
   if(!soxr_callback_data.p_data_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "SOXR, Malloc failed for buffer.\n");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -183,6 +189,8 @@ void* pthread_function_soxr(void *p_data)
   if(!p_output_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "SOXR, Malloc failed for buffer.\n");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -210,8 +218,6 @@ error_cleanup:
 
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "SOXR thread finished.");
 

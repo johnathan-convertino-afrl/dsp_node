@@ -151,6 +151,8 @@ void* pthread_function_tcp_server_send(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -161,6 +163,8 @@ void* pthread_function_tcp_server_send(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "TCP SERVER, Could not allocate buffer");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -202,8 +206,6 @@ void* pthread_function_tcp_server_send(void *p_data)
 error_cleanup:
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
 
-  kill_thread = 1;
-
   logger_info_msg(p_dsp_node->p_logger, "TCP SERVER SEND thread finished.");
 
   p_dsp_node->active = 0;
@@ -226,6 +228,8 @@ void* pthread_function_tcp_server_recv(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -236,6 +240,8 @@ void* pthread_function_tcp_server_recv(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "TCP SERVER, Could not allocate buffer");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -275,8 +281,6 @@ void* pthread_function_tcp_server_recv(void *p_data)
 
 error_cleanup:
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "TCP SERVER RECV thread finished.");
 

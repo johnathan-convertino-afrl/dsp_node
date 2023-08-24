@@ -238,6 +238,8 @@ void* pthread_function_uhd_rx(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto ERR_EXIT_THREAD;
   }
 
@@ -251,6 +253,8 @@ void* pthread_function_uhd_rx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, make rx streamer failed.");
 
+    kill_thread = 1;
+
     goto ERR_EXIT_THREAD;
   }
 
@@ -259,6 +263,8 @@ void* pthread_function_uhd_rx(void *p_data)
   if(error)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not setup stream.");
+
+    kill_thread = 1;
 
     goto ERR_EXIT_THREAD;
   }
@@ -278,6 +284,8 @@ void* pthread_function_uhd_rx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not get max number of samples.");
 
+    kill_thread = 1;
+
     goto ERR_KILL_STREAMER;
   }
 
@@ -296,6 +304,8 @@ void* pthread_function_uhd_rx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not issue stream command.");
 
+    kill_thread = 1;
+
     goto ERR_KILL_STREAMER;
   }
 
@@ -306,6 +316,8 @@ void* pthread_function_uhd_rx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, could not create metadata.");
 
+    kill_thread = 1;
+
     goto ERR_KILL_STREAMER;
   }
 
@@ -315,6 +327,8 @@ void* pthread_function_uhd_rx(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD RX, allocation failed");
+
+    kill_thread = 1;
 
     goto ERR_EXIT_THREAD_MD;
   }
@@ -358,8 +372,6 @@ ERR_KILL_STREAMER:
 
 ERR_EXIT_THREAD:
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "UHD RX thread finished.");
 
@@ -506,6 +518,8 @@ void* pthread_function_uhd_tx(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.");
 
+    kill_thread = 1;
+
     goto ERR_EXIT_THREAD;
   }
 
@@ -519,6 +533,8 @@ void* pthread_function_uhd_tx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD TX, USRP make tx streamer failed.");
 
+    kill_thread = 1;
+
     goto ERR_EXIT_THREAD;
   }
 
@@ -527,6 +543,8 @@ void* pthread_function_uhd_tx(void *p_data)
   if(error)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD TX, TX could not setup stream.");
+
+    kill_thread = 1;
 
     goto ERR_EXIT_THREAD;
   }
@@ -546,6 +564,8 @@ void* pthread_function_uhd_tx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD TX, Could not get max number of samples.");
 
+    kill_thread = 1;
+
     goto ERR_KILL_STREAMER;
   }
 
@@ -560,6 +580,8 @@ void* pthread_function_uhd_tx(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD TX, Could not create metadata.");
 
+    kill_thread = 1;
+
     goto ERR_KILL_STREAMER;
   }
 
@@ -569,6 +591,8 @@ void* pthread_function_uhd_tx(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "UHD TX, ERROR TX");
+
+    kill_thread = 1;
 
     goto ERR_EXIT_THREAD_MD;
   }
@@ -605,7 +629,6 @@ ERR_KILL_STREAMER:
   uhd_tx_streamer_free(&tx_streamer);
 
 ERR_EXIT_THREAD:
-  kill_thread = 1;
 
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
 

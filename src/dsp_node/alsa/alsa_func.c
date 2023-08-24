@@ -122,6 +122,8 @@ void* pthread_function_alsa_read(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -132,6 +134,8 @@ void* pthread_function_alsa_read(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "ALSA, Could not allocate file read buffer");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -160,8 +164,6 @@ error_cleanup:
   free(p_buffer);
 
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "ALSA, read thread finished.");
 
@@ -240,6 +242,8 @@ void* pthread_function_alsa_write(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -249,6 +253,8 @@ void* pthread_function_alsa_write(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "ALSA, No input buffer set for file write!\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -257,6 +263,8 @@ void* pthread_function_alsa_write(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "ALSA, Could not allocate file read buffer");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -284,8 +292,6 @@ error_cleanup:
   free(p_buffer);
 
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "ALSA, write thread finished.");
 

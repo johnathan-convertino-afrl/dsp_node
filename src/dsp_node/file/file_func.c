@@ -102,6 +102,8 @@ void* pthread_function_file_read(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -112,6 +114,8 @@ void* pthread_function_file_read(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "FILE READ, could not allocate file read buffer.");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -140,8 +144,6 @@ error_cleanup:
   free(p_buffer);
 
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "FILE READ thread finished.");
 
@@ -217,6 +219,8 @@ void* pthread_function_file_write(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -226,6 +230,8 @@ void* pthread_function_file_write(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "FILE WRITE, no input buffer set for file write!");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -234,6 +240,8 @@ void* pthread_function_file_write(void *p_data)
   if(!p_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "FILE WRITE, could not allocate file read buffer.");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -267,8 +275,6 @@ error_cleanup:
   free(p_buffer);
 
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "FILE WRITE thread finished.");
 

@@ -108,6 +108,8 @@ void* pthread_function_codec2_mod(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -126,6 +128,8 @@ void* pthread_function_codec2_mod(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "CODEC2, mod could not allocate p_bytes_in buffer.");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -136,7 +140,7 @@ void* pthread_function_codec2_mod(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "CODEC2, mod could not allocate p_mod_out buffer.");
 
-    free(p_bytes_in);
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -224,8 +228,6 @@ error_cleanup:
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
 
-  kill_thread = 1;
-
   logger_info_msg(p_dsp_node->p_logger, "CODEC2, modulation thread finished.");
 
   p_dsp_node->active = 0;
@@ -305,6 +307,8 @@ void* pthread_function_codec2_demod(void *p_data)
   {
     fprintf(stderr, "ERROR: Data Struct is NULL.\n");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -319,6 +323,8 @@ void* pthread_function_codec2_demod(void *p_data)
   {
     logger_error_msg(p_dsp_node->p_logger, "CODEC2, demod could not allocate raw processor buffer.");
 
+    kill_thread = 1;
+
     goto error_cleanup;
   }
 
@@ -329,6 +335,8 @@ void* pthread_function_codec2_demod(void *p_data)
   if(!p_demod_in)
   {
     logger_error_msg(p_dsp_node->p_logger, "CODEC2, demod could not allocate enc processor buffer.");
+
+    kill_thread = 1;
 
     goto error_cleanup;
   }
@@ -381,8 +389,6 @@ error_cleanup:
 
   ringBufferEndBlocking(p_dsp_node->p_output_ring_buffer);
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
-
-  kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "CODEC2, demodulation thread finished.");
 
