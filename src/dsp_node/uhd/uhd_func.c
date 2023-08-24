@@ -575,6 +575,8 @@ void* pthread_function_uhd_tx(void *p_data)
 
   p_dsp_node->total_bytes_processed = 0;
 
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX thread started.");
+
   // read from ringbuffer, write to usrp
   do
   {
@@ -606,6 +608,8 @@ ERR_EXIT_THREAD:
   kill_thread = 1;
 
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  logger_info_msg(p_dsp_node->p_logger, "UHD TX thread finished.");
 
   p_dsp_node->active = 0;
 
