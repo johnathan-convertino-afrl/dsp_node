@@ -77,7 +77,9 @@ struct s_dsp_node * dsp_create(unsigned long buffer_size, unsigned long chunk_si
 
   p_temp->total_bytes_processed = 0;
 
-  p_temp->id_number = g_node_count++;
+  p_temp->active = 0;
+
+  p_temp->id_number = ++g_node_count;
 
   logger_info_msg(gp_logger, "DSP NODE %p created.", p_temp);
 
@@ -226,6 +228,8 @@ void dsp_cleanup(struct s_dsp_node *p_object)
 
     return;
   }
+
+  while(p_object->active);
 
   if(p_object->free_call)
   {

@@ -30,6 +30,11 @@ enum e_binary_type {DATA_INVALID=-1, DATA_S8=0, DATA_U8, DATA_CS8, DATA_S16, DAT
 struct s_dsp_node
 {
   /**
+   * @var s_dsp_node::active
+   * is the node active 0 = no 1 = yes?
+   */
+  volatile unsigned long active;
+  /**
    * @var s_dsp_node::id_number
    * node id number
    */
