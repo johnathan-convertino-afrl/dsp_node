@@ -154,6 +154,8 @@ void* pthread_function_tcp_server_send(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->input_type_size);
 
   if(!p_buffer)
@@ -204,6 +206,8 @@ error_cleanup:
 
   logger_info_msg(p_dsp_node->p_logger, "TCP SERVER SEND thread finished.");
 
+  p_dsp_node->active = 0;
+
   return NULL;
 }
 
@@ -224,6 +228,8 @@ void* pthread_function_tcp_server_recv(void *p_data)
 
     goto error_cleanup;
   }
+
+  p_dsp_node->active = 1;
 
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->output_type_size);
 
@@ -273,6 +279,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "TCP SERVER RECV thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }

@@ -1,5 +1,5 @@
 //******************************************************************************
-/// @file     codec2_demod_file.c
+/// @file     resample_codec2_mod_file.c
 /// @author   Jay Convertino(johnathan.convertino.1@us.af.mil)
 /// @date     2023.06.29
 /// @brief    Example of codec2 datac1 of file demod

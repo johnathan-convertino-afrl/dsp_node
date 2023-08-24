@@ -146,6 +146,8 @@ void* pthread_function_soxr(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   soxr_error = soxr_set_input_fn(((struct s_soxr_data *)p_dsp_node->p_data)->soxr, (soxr_input_fn_t)input_data_callback, &soxr_callback_data, p_dsp_node->chunk_size);
 
   if(soxr_error)
@@ -212,6 +214,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "SOXR thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }

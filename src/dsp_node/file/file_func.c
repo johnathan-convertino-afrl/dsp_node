@@ -105,6 +105,8 @@ void* pthread_function_file_read(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->output_type_size);
 
   if(!p_buffer)
@@ -142,6 +144,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "FILE READ thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }
@@ -216,6 +220,8 @@ void* pthread_function_file_write(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   if(!p_dsp_node->p_input_ring_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "FILE WRITE, no input buffer set for file write!");
@@ -265,6 +271,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "FILE WRITE thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }

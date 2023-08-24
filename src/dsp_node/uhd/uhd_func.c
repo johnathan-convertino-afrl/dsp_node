@@ -241,6 +241,8 @@ void* pthread_function_uhd_rx(void *p_data)
     goto ERR_EXIT_THREAD;
   }
 
+  p_dsp_node->active = 1;
+
   p_uhd_data = (struct s_uhd_data *)p_dsp_node->p_data;
 
   error = uhd_rx_streamer_make(&rx_streamer);
@@ -360,6 +362,8 @@ ERR_EXIT_THREAD:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "UHD RX thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }
@@ -505,6 +509,8 @@ void* pthread_function_uhd_tx(void *p_data)
     goto ERR_EXIT_THREAD;
   }
 
+  p_dsp_node->active = 1;
+
   p_uhd_data = (struct s_uhd_data *)p_dsp_node->p_data;
 
   error = uhd_tx_streamer_make(&tx_streamer);
@@ -600,6 +606,8 @@ ERR_EXIT_THREAD:
   kill_thread = 1;
 
   ringBufferEndBlocking(p_dsp_node->p_input_ring_buffer);
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }

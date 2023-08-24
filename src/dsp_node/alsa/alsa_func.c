@@ -125,6 +125,8 @@ void* pthread_function_alsa_read(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   p_buffer = malloc(p_dsp_node->chunk_size * p_dsp_node->output_type_size);
 
   if(!p_buffer)
@@ -162,6 +164,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "ALSA, read thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }
@@ -239,6 +243,8 @@ void* pthread_function_alsa_write(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   if(!p_dsp_node->p_input_ring_buffer)
   {
     logger_error_msg(p_dsp_node->p_logger, "ALSA, No input buffer set for file write!\n");
@@ -282,6 +288,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "ALSA, write thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }

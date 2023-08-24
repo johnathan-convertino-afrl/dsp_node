@@ -182,7 +182,14 @@ int ncurses_dsp_monitor_start()
 
     while(g_need_refresh == 1);
 
-    if(!gp_stdscr) return ~0;
+    if(g_need_refresh)
+    {
+      logger_error_msg(gp_logger, "NCURSES DSP MONITOR init and resize failed.");
+
+      kill_thread = 1;
+
+      return ~0;
+    }
 
     error = pthread_create(&throbber_thread, NULL, display_throbber, NULL);
 
@@ -361,8 +368,6 @@ void *init_screen_and_resize(void *p_data)
     }
   } while(!kill_thread);
 
-  g_need_refresh = 2;
-
   use_default_colors();
 
   endwin();
@@ -370,6 +375,8 @@ void *init_screen_and_resize(void *p_data)
   gp_stdscr = NULL;
 
   signal(SIGWINCH, SIG_IGN);
+
+  g_need_refresh = 2;
 
   pthread_join(update_thread, NULL);
 
@@ -418,6 +425,15 @@ void *display_thread(void *p_data)
     return NULL;
   }
 
+  while(g_need_refresh == 1);
+
+  if(g_need_refresh)
+  {
+    logger_error_msg(p_object->p_dsp_node->p_logger, "NCURSES DSP MONITOR display thread exited.");
+
+    return NULL;
+  }
+
   p_window = newwin(DISPLAY_ROW_SIZE, DISPLAY_COL_SIZE, (int)((p_object->node_number-1) * DISPLAY_ROW_SIZE + HEADER_ROW_SIZE + THROBBER_ROW_SIZE), 1);
 
   if(!p_window)
@@ -455,7 +471,11 @@ void *display_thread(void *p_data)
 
     pthread_cond_wait(&g_refresh_condition, &g_mutex);
 
+    if(!p_object->p_dsp_node->active) wattron(p_window, COLOR_PAIR(RED_TEXT));
+
     box(p_window, '|', '-');
+
+    if(!p_object->p_dsp_node->active) wattroff(p_window, COLOR_PAIR(RED_TEXT));
 
     wattron(p_window, COLOR_PAIR(RED_TEXT));
 
@@ -477,9 +497,13 @@ void *display_thread(void *p_data)
 
     wmove(p_window, 1, DISPLAY_COL_TWO);
 
-    wprintw(p_window, "Type Size In : %3d Bytes", p_object->p_dsp_node->input_type_size);
+    wprintw(p_window, "ID number    : %3ld       ", p_object->p_dsp_node->id_number);
 
     wmove(p_window, 2, DISPLAY_COL_TWO);
+
+    wprintw(p_window, "Type Size In : %3d Bytes", p_object->p_dsp_node->input_type_size);
+
+    wmove(p_window, 3, DISPLAY_COL_TWO);
 
     wprintw(p_window, "Type Size Out: %3d Bytes",  p_object->p_dsp_node->output_type_size);
 
@@ -504,6 +528,15 @@ void *display_throbber(void *p_data)
   WINDOW *th_window = NULL;
 
   (void)p_data;
+
+  while(g_need_refresh == 1);
+
+  if(g_need_refresh)
+  {
+    logger_error_msg(gp_logger, "NCURSES DSP MONITOR throbber exited.");
+
+    return NULL;
+  }
 
   th_window = newwin(THROBBER_ROW_SIZE, DISPLAY_COL_SIZE, 5, 1);
 

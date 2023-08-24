@@ -111,6 +111,8 @@ void* pthread_function_codec2_mod(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   // setup data sizes for bytes per frame, number modulated out and such.
   bytes_per_modem_frame = (size_t)freedv_get_bits_per_modem_frame((struct freedv *)p_dsp_node->p_data)/8;
 
@@ -226,6 +228,8 @@ error_cleanup:
 
   logger_info_msg(p_dsp_node->p_logger, "CODEC2, modulation thread finished.");
 
+  p_dsp_node->active = 0;
+
   return NULL;
 }
 
@@ -304,6 +308,8 @@ void* pthread_function_codec2_demod(void *p_data)
     goto error_cleanup;
   }
 
+  p_dsp_node->active = 1;
+
   // how many bytes does each from the modem contain?
   bytes_per_modem_frame = (size_t)freedv_get_bits_per_modem_frame((struct freedv *)p_dsp_node->p_data)/8;
 
@@ -379,6 +385,8 @@ error_cleanup:
   kill_thread = 1;
 
   logger_info_msg(p_dsp_node->p_logger, "CODEC2, demodulation thread finished.");
+
+  p_dsp_node->active = 0;
 
   return NULL;
 }
