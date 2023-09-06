@@ -6,7 +6,7 @@ author: Jay Convertino
 
 date: 2023.01.23  
 
-license: BEER-WARE  
+license: MIT
 
 ## Release Versions
 ### Current

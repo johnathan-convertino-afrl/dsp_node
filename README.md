@@ -1,19 +1,22 @@
 # DSP Node with examples
 
-Examples for codec2 datac1 porition of freedv
+Examples for various digital signal processing library functions and interfaces (file, ALSA, UHD).
 
 author: Jay Convertino  
 
 date: 2023.07.15
 
-license: BEER-WARE  
+license: MIT
 
 ## Release Versions
 ### Current
-  - none
+  - v0.5.0 - works, but needs alot of polish.
 
 ### Past
   - none
+
+## License
+  All files, excluding the samples directory and its contents, fall under the MIT license included with this readme file.
 
 ## Info
   - samples : Contains example files to be used for samples
