@@ -1,6 +1,6 @@
 # DSP Node with examples
 
-Examples for various digital signal processing library functions and interfaces (file, ALSA, UHD).
+Examples for various digital signal processing library functions and interfaces (file, ALSA, UHD, VOSK).
 
 author: Jay Convertino  
 
@@ -30,6 +30,7 @@ license: MIT
 ## Recommended
   - Codec2 v1.0.5 or greater (https://github.com/drowe67/codec2)
   - UHD v4.4.0.0 (https://github.com/EttusResearch/uhd)
+  - Vosk v0.3.50 or greater (https://github.com/alphacep/vosk-api)
   - SOXR master
   - libasound2-dev
   - ncurses5-dev
@@ -50,6 +51,7 @@ The Following options are off by default. ALSA will not build if it is not found
     - BUILD_CODEC2_EXAMPLES : Only build CODEC2 only examples.
     - BUILD_UHD_EXAMPLES : Only build UHD only examples
     - BUILD_SOXR_EXAMPLES : Only build SOXR only examples.
+    - BUILD_VOSK_EXAMPLES : Only build VOSK only examples.
     - BUILD_EXAMPLES : Only build file to file examples.
     - BUILD_NCURSES_VERSIONS : Build any of the above, but as a version with ncurses gui.
     - CREATE_DOXYGEN : Generate doxygen documents for DSP Node.
@@ -61,6 +63,7 @@ The Following options are off by default. ALSA will not build if it is not found
     - BUILD_LIB_ALSA : linux audio
     - BUILD_LIB_CODEC2 : data mod/demod
     - BUILD_LIB_TCP : TCP server or client
+    - BUILD_LIB_VOSK : VOSK speech to txt processor.
   
 To turn on codec2 for example:
   - cmake ../ -DBUILD_CODEC2_EXAMPLES=ON

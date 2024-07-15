@@ -31,6 +31,13 @@ if(BUILD_ALSA_EXAMPLES)
   endif()
 endif()
 
+if(BUILD_VOSK_EXAMPLES)
+  add_executable(file_to_vosk_to_file file_to_vosk_to_file.c)
+  target_link_libraries(file_to_vosk_to_file PRIVATE ${LIB_NAME_RINGBUFFER} dsp_node file_func kill_throbber logger vosk_func)
+  target_compile_options(file_to_vosk_to_file PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)
+  install(TARGETS file_to_vosk_to_file DESTINATION bin)
+endif()
+
 if(BUILD_ALSA_EXAMPLES AND BUILD_CODEC2_EXAMPLES)
   if(ALSA_FOUND)
     add_executable(codec2_demod_alsa_to_file codec2_demod_alsa_to_file.c)
