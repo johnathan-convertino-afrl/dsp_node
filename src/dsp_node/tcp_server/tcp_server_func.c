@@ -292,7 +292,10 @@ error_cleanup:
 void* connection_keep_alive(void *p_data)
 {
   int error = 0;
+  int prev_revents = 0;
   unsigned socket_len = 0;
+
+  char p_buffer[16];
 
   struct pollfd poll_socket;
 
@@ -350,10 +353,10 @@ void* connection_keep_alive(void *p_data)
 
   logger_info_msg(p_dsp_node->p_logger, "TCP SERVER STARTED");
 
+  logger_info_msg(p_dsp_node->p_logger, "TCP SERVER WAITING FOR CLIENT");
+
   do
   {
-    logger_info_msg(p_dsp_node->p_logger, "TCP SERVER WAITING FOR CLIENT");
-
     error = poll(&poll_socket, 1, 0);
 
     if(error < 0)
@@ -386,11 +389,37 @@ void* connection_keep_alive(void *p_data)
     logger_info_msg(p_dsp_node->p_logger, "TCP SERVER CONNECTED %s", inet_ntoa(client_socket_info.sin_addr));
 
     // while connected, just wait till dissconnect or kill_thread
-    while(!(g_poll_connection.revents & POLLHUP) && !(g_poll_connection.revents & POLLERR) && !kill_thread);
+    // while(!(g_poll_connection.revents & POLLHUP) && !(g_poll_connection.revents & POLLERR) && !kill_thread);
+    prev_revents = g_send_tcp_server[*p_index].poll_connection.revents;
+
+    // while connected, just wait till dissconnect or kill_thread
+    for(;;)
+    {
+      int num_bytes_read = 0;
+
+      error = poll(&g_send_tcp_server[*p_index].poll_connection, 1, 0);
+
+      if(error <= 0) continue;
+
+      if(g_poll_connection.revents & POLLHUP) break;
+      if(g_poll_connection.revents & POLLERR) break;
+      if(!kill_thread) break;
+
+      if(prev_revents != g_poll_connection.revents)
+      {
+        prev_revents = g_poll_connection.poll_connection.revents;
+
+        num_bytes_read = recv(g_poll_connection.fd, p_buffer, 16, MSG_PEEK);
+
+        if(num_bytes_read <= 0) break;
+      }
+    };
 
     logger_info_msg(p_dsp_node->p_logger, "TCP SERVER DISCONNECTED");
 
     close(g_poll_connection.fd);
+
+    if(!kill_thread) logger_info_msg(p_dsp_node->p_logger, "TCP SERVER WAITING FOR CLIENT");
   }
   while(!kill_thread);
 

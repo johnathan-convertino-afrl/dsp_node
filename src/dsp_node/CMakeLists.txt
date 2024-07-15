@@ -50,3 +50,7 @@ endif()
 if(BUILD_TCP_EXAMPLES OR BUILD_LIB_TCP_SERVER)
   add_subdirectory(tcp_server)
 endif()
+
+if(BUILD_VOSK_EXAMPLES OR BUILD_LIB_VOSK)
+  add_subdirectory(vosk)
+endif()
