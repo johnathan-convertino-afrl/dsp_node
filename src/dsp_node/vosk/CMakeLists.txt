@@ -22,11 +22,8 @@ FetchContent_Declare(
         ${LIB_NAME_KALDI}
         GIT_REPOSITORY https://github.com/kaldi-asr/kaldi
         GIT_PROGRESS   FALSE
-        CMAKE_ARGS
-          -DBUILD_SHARED_LIBS=OFF
+        CMAKE_ARGS    -DBUILD_SHARED_LIBS=OFF
 )
-
-FetchContent_MakeAvailable(${LIB_NAME_KALDI})
 
 set(LIB_NAME_VOSK vosk)
 
@@ -37,13 +34,14 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/alphacep/vosk-api
         GIT_TAG        v0.3.50
         GIT_PROGRESS   FALSE
-        CMAKE_ARGS
-          -DBUILD_SHARED_LIBS=OFF
-          -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/${REPO_PATH}/${LIB_NAME_KALDI}
+        CMAKE_ARGS    -DBUILD_SHARED_LIBS=OFF
 )
 
-FetchContent_MakeAvailable(${LIB_NAME_VOSK})
+set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/${REPO_PATH}/${LIB_NAME_KALDI}/kaldi-build/cmake)
+
+FetchContent_MakeAvailable(${LIB_NAME_KALDI} ${LIB_NAME_VOSK})
 
 add_library(vosk_func ${VOSK_FUNC_SRCS})
-target_link_libraries(vosk_func PUBLIC ${LIB_NAME_RINGBUFFER} ${LIB_NAME_VOSK} Threads::Threads)
+#set_property(TARGET vosk_func PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(vosk_func PUBLIC ${LIB_NAME_RINGBUFFER} ${LIB_NAME_KALDI} ${LIB_NAME_VOSK} Threads::Threads)
 target_compile_options(vosk_func PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)

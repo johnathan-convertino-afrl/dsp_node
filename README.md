@@ -27,6 +27,14 @@ license: MIT
   - build-essential
   - cmake
 
+### Vosk/Kaldi Requirements
+  - libblas-dev
+  - libblas64-dev
+  - libatlas-base-dev
+  - liblapack-dev
+  - libopenblas-dev
+  - libgsl-dev
+
 ## Recommended
   - Codec2 v1.0.5 or greater (https://github.com/drowe67/codec2)
   - UHD v4.4.0.0 (https://github.com/EttusResearch/uhd)
