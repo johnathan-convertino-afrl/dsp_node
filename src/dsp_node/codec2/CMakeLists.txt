@@ -25,7 +25,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/drowe67/codec2-dev
         GIT_TAG        v1.0.5
         GIT_PROGRESS   FALSE
-        CMAKE_ARGS     -DBUILD_SHARED_LIBS=OFF
+        CMAKE_ARGS     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
 )
 
 FetchContent_MakeAvailable(${LIB_NAME_CODEC2})

@@ -98,7 +98,13 @@ endif()
 
 include(FetchContent)
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "STATIC" FORCE)
+if(NOT DEFINED BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS ON)
+endif()
+
+if(NOT BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "STATIC" FORCE)
+endif()
 
 set(REPO_PATH git_pulls)
 
@@ -111,7 +117,7 @@ FetchContent_Declare(
         GIT_REPOSITORY  https://github.com/sparkletron/C89_pthread_ring_buffer.git
         GIT_TAG         release_v1.6.1
         GIT_PROGRESS    FALSE
-        CMAKE_ARGS      -DBUILD_SHARED_LIBS=OFF
+        CMAKE_ARGS      -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
 )
 
 FetchContent_MakeAvailable(${LIB_NAME_RINGBUFFER})

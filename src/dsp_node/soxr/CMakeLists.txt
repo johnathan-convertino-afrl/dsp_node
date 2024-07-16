@@ -24,7 +24,7 @@ FetchContent_Declare(
         GIT_REPOSITORY  https://git.code.sf.net/p/soxr/code
         GIT_TAG         master
         GIT_PROGRESS    FALSE
-        CMAKE_ARGS      -DBUILD_SHARED_LIBS=OFF -Wno-dev
+        CMAKE_ARGS      -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} -Wno-dev
         PATCH_COMMAND  git apply --ignore-space-change --ignore-whitespace ${CMAKE_CURRENT_SOURCE_DIR}/patch/soxr_cmake.patch || true
         GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
 )
