@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
         p_read_file = strdup(optarg);
         break;
       case 's':
-        rate = atof(optarg);
+        rate = (float)atof(optarg);
         break;
       case 'h':
       default:

@@ -103,6 +103,8 @@ int init_callback_vosk(void *p_init_args, void *p_object)
 //Pthread function for threading vosk
 void* pthread_function_vosk(void *p_data)
 {
+  unsigned long numElemRead   = 0;
+
   uint8_t *p_buffer = NULL;
 
   struct s_dsp_node *p_dsp_node = NULL;
@@ -143,7 +145,6 @@ void* pthread_function_vosk(void *p_data)
   {
     int final                   = 0;
     unsigned long numChars      = 0;
-    unsigned long numElemRead   = 0;
     unsigned long numElemWrote  = 0;
     char *p_json_txt            = NULL;
 
@@ -159,11 +160,11 @@ void* pthread_function_vosk(void *p_data)
         final = vosk_recognizer_accept_waveform(p_vosk_data->recognizer, p_buffer, numElemRead);
         break;
       case(DATA_S16):
-        final = vosk_recognizer_accept_waveform_s(p_vosk_data->recognizer, p_buffer, numElemRead);
+        final = vosk_recognizer_accept_waveform_s(p_vosk_data->recognizer, (short *)p_buffer, numElemRead);
         break;
       case(DATA_FLOAT):
       default:
-        final = vosk_recognizer_accept_waveform_f(p_vosk_data->recognizer, p_buffer, numElemRead);
+        final = vosk_recognizer_accept_waveform_f(p_vosk_data->recognizer, (float *)p_buffer, numElemRead);
         break;
     }
 
@@ -171,7 +172,7 @@ void* pthread_function_vosk(void *p_data)
 
     p_json_txt = vosk_recognizer_result(p_vosk_data->recognizer);
 
-    numChars = strlen(p_json_txt)
+    numChars = strlen(p_json_txt);
 
     do
     {
