@@ -50,7 +50,7 @@ The Following options are off by default. ALSA will not build if it is not found
     - BUILD_CODEC2_EXAMPLES : Only build CODEC2 only examples.
     - BUILD_UHD_EXAMPLES : Only build UHD only examples
     - BUILD_SOXR_EXAMPLES : Only build SOXR only examples.
-    - BUILD_EXAMPLES : Only build file to file examples.
+    - BUILD_FILE_EXAMPLES : Only build file to file examples.
     - BUILD_NCURSES_VERSIONS : Build any of the above, but as a version with ncurses gui.
     - CREATE_DOXYGEN : Generate doxygen documents for DSP Node.
   * LIBRARIES (will automagically build for applications above)
